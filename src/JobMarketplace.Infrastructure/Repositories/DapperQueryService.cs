@@ -2,7 +2,9 @@
 using JobMarketplace.Application.Common.Interfaces;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Data;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace JobMarketplace.Infrastructure.Repositories
@@ -15,11 +17,14 @@ namespace JobMarketplace.Infrastructure.Repositories
     public class DapperQueryService : IDapperQueryService
     {
         private readonly string _connectionString;
+        private readonly ILogger<DapperQueryService> _logger;
+        private const int SlowQueryThresholdMs = 300;
 
-        public DapperQueryService(IConfiguration configuration)
+        public DapperQueryService(IConfiguration configuration, ILogger<DapperQueryService> logger)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+            _logger = logger;
         }
 
         private SqlConnection CreateConnection() => new SqlConnection(_connectionString);
@@ -30,11 +35,16 @@ namespace JobMarketplace.Infrastructure.Repositories
             object? parameters = null,
             CancellationToken cancellationToken = default)
         {
+            var sw = Stopwatch.StartNew();
             using var connection = CreateConnection();
-            return await connection.QueryAsync<T>(
+            var result = await connection.QueryAsync<T>(
                 storedProcedure,
                 parameters,
                 commandType: CommandType.StoredProcedure);
+            sw.Stop();
+
+            LogQueryExecution(storedProcedure, sw.ElapsedMilliseconds);
+            return result;
         }
 
         /// <summary>Executes SP, returns single row or null.</summary>
@@ -43,11 +53,16 @@ namespace JobMarketplace.Infrastructure.Repositories
             object? parameters = null,
             CancellationToken cancellationToken = default)
         {
+            var sw = Stopwatch.StartNew();
             using var connection = CreateConnection();
-            return await connection.QueryFirstOrDefaultAsync<T>(
+            var result = await connection.QueryFirstOrDefaultAsync<T>(
                 storedProcedure,
                 parameters,
                 commandType: CommandType.StoredProcedure);
+            sw.Stop();
+
+            LogQueryExecution(storedProcedure, sw.ElapsedMilliseconds);
+            return result;
         }
 
         /// <summary>
@@ -60,6 +75,8 @@ namespace JobMarketplace.Infrastructure.Repositories
             object? parameters = null,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            _logger.LogInformation("Streaming SP: {StoredProcedure}", storedProcedure);
+
             using var connection = CreateConnection();
             await connection.OpenAsync(cancellationToken);
 
@@ -71,6 +88,25 @@ namespace JobMarketplace.Infrastructure.Repositories
             await foreach (var item in stream.WithCancellation(cancellationToken))
             {
                 yield return item;
+            }
+        }
+
+        /// <summary>
+        /// Logs SP execution time. Warns if query exceeds threshold.
+        /// </summary>
+        private void LogQueryExecution(string storedProcedure, long elapsedMs)
+        {
+            if (elapsedMs > SlowQueryThresholdMs)
+            {
+                _logger.LogWarning(
+                    "SLOW QUERY: {StoredProcedure} took {ElapsedMs}ms (threshold: {ThresholdMs}ms)",
+                    storedProcedure, elapsedMs, SlowQueryThresholdMs);
+            }
+            else
+            {
+                _logger.LogDebug(
+                    "SP: {StoredProcedure} completed in {ElapsedMs}ms",
+                    storedProcedure, elapsedMs);
             }
         }
     }

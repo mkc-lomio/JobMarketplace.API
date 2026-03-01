@@ -29,12 +29,20 @@ namespace JobMarketplace.API.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An unhandled exception occurred");
-                await HandleExceptionAsync(context, ex);
+                // Correlation ID is available because CorrelationIdMiddleware runs before this
+                var correlationId = context.Items["CorrelationId"]?.ToString() ?? "unknown";
+
+                _logger.LogError(ex,
+                    "Unhandled exception on {Method} {Path} | CorrelationId: {CorrelationId}",
+                    context.Request.Method,
+                    context.Request.Path,
+                    correlationId);
+
+                await HandleExceptionAsync(context, ex, correlationId);
             }
         }
 
-        private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+        private static async Task HandleExceptionAsync(HttpContext context, Exception exception, string correlationId)
         {
             context.Response.ContentType = "application/json";
 
@@ -43,15 +51,15 @@ namespace JobMarketplace.API.Middleware
             {
                 ValidationException validationEx => (
                     (int)HttpStatusCode.BadRequest,
-                    new { error = "Validation Failed", details = validationEx.Errors }
+                    (object)new { error = "Validation Failed", details = validationEx.Errors, correlationId }
                 ),
                 NotFoundException notFoundEx => (
                     (int)HttpStatusCode.NotFound,
-                    (object)new { error = notFoundEx.Message }
+                    (object)new { error = notFoundEx.Message, correlationId }
                 ),
                 _ => (
                     (int)HttpStatusCode.InternalServerError,
-                    (object)new { error = "An unexpected error occurred." }  // Never expose internal details
+                    (object)new { error = "An unexpected error occurred.", correlationId }  // CorrelationId helps support trace the issue
                 )
             };
 

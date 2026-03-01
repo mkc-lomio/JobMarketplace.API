@@ -1,20 +1,19 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics;
 
 namespace JobMarketplace.Application.Common.Behaviors
 {
     /// <summary>
-    /// MediatR pipeline behavior — auto-logs every request and response.
-    /// Applies to all commands and queries. No log lines needed in handlers.
+    /// MediatR pipeline behavior — logs every request with execution time.
+    /// Warns if a handler takes longer than 500ms (potential performance issue).
     /// Pipeline: Request → ValidationBehavior → [LoggingBehavior] → Handler
     /// </summary>
     public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
         where TRequest : notnull
     {
         private readonly ILogger<LoggingBehavior<TRequest, TResponse>> _logger;
+        private const int SlowThresholdMs = 500;
 
         public LoggingBehavior(ILogger<LoggingBehavior<TRequest, TResponse>> logger)
         {
@@ -29,8 +28,24 @@ namespace JobMarketplace.Application.Common.Behaviors
             var requestName = typeof(TRequest).Name;
 
             _logger.LogInformation("Handling {RequestName} | {@Request}", requestName, request);
+
+            var sw = Stopwatch.StartNew();
             var response = await next();
-            _logger.LogInformation("Handled {RequestName} | {@Response}", requestName, response);
+            sw.Stop();
+
+            // Warn if handler took longer than threshold — helps catch slow queries early
+            if (sw.ElapsedMilliseconds > SlowThresholdMs)
+            {
+                _logger.LogWarning(
+                    "SLOW HANDLER: {RequestName} took {ElapsedMs}ms (threshold: {ThresholdMs}ms)",
+                    requestName, sw.ElapsedMilliseconds, SlowThresholdMs);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Handled {RequestName} in {ElapsedMs}ms",
+                    requestName, sw.ElapsedMilliseconds);
+            }
 
             return response;
         }

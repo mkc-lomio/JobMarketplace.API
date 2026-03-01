@@ -5,71 +5,135 @@ using JobMarketplace.Application.Common.Interfaces;
 using JobMarketplace.Infrastructure;
 using JobMarketplace.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using Serilog;
 using System.Text;
+using System.Text.Json;
 
-var builder = WebApplication.CreateBuilder(args);
+// ─── Serilog Bootstrap ───────────────────────────────────────
+// Configure Serilog BEFORE building the host so startup errors are captured too.
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json")
+        .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
+        .Build())
+    .Enrich.FromLogContext()          // Enables LogContext.PushProperty (used by CorrelationIdMiddleware)
+    .Enrich.WithMachineName()
+    .Enrich.WithThreadId()
+    .CreateLogger();
 
-// Register all services from each layer (assembly scanning — no manual registration)
-builder.Services.AddApplicationServices();                          // MediatR, FluentValidation, AutoMapper
-builder.Services.AddInfrastructureServices(builder.Configuration);  // EF Core, Repositories, Dapper
-
-// JWT Authentication
-var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()!;
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
-
-builder.Services.AddAuthentication(options =>
+try
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+    Log.Information("Starting JobMarketplace API...");
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    // Replace default logging with Serilog
+    builder.Host.UseSerilog();
+
+    // Register all services from each layer
+    builder.Services.AddApplicationServices();                          // MediatR, FluentValidation, AutoMapper
+    builder.Services.AddInfrastructureServices(builder.Configuration);  // EF Core, Repositories, Dapper, Health Checks
+
+    // JWT Authentication
+    var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()!;
+    builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
+
+    builder.Services.AddAuthentication(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings.Issuer,
-        ValidAudience = jwtSettings.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
-        ClockSkew = TimeSpan.Zero
-    };
-});
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
 
-builder.Services.AddAuthorization();
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+    builder.Services.AddAuthorization();
+    builder.Services.AddControllers();
+    builder.Services.AddOpenApi();
 
-var app = builder.Build();
+    var app = builder.Build();
 
-// Apply pending migrations + deploy stored procedures on startup
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();                               // Creates DB if missing, applies new migrations if exists
-    await StoredProcedureMigrator.DeployStoredProceduresAsync(db);  // CREATE OR ALTER — idempotent, safe every startup
-    var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    await DbSeeder.SeedAsync(db, passwordHasher);
-    Console.WriteLine("Database 'JobMarketplaceDB' migrated successfully!");
+    // Apply pending migrations + deploy stored procedures on startup
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await db.Database.MigrateAsync();
+        await StoredProcedureMigrator.DeployStoredProceduresAsync(db);
+        var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        await DbSeeder.SeedAsync(db, passwordHasher);
+        Log.Information("Database 'JobMarketplaceDB' migrated successfully!");
+    }
+
+    // ─── Middleware pipeline — order matters! ────────────────────
+    // 1. Correlation ID first — so every middleware below has access to it
+    app.UseMiddleware<CorrelationIdMiddleware>();
+
+    // 2. Exception handler — catches everything from middleware below
+    app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+
+    // 3. Request logging — logs method, path, status code, duration
+    app.UseMiddleware<RequestLoggingMiddleware>();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi();
+        app.MapScalarApiReference();
+        app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
+    }
+
+    app.UseHttpsRedirection();
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.MapControllers();
+
+    // ─── Health check endpoint ───────────────────────────────────
+    // GET /health — returns { "status": "Healthy", "checks": { "sqlserver": "Healthy" } }
+    // Used by load balancers, Docker, Kubernetes to check if the API is ready
+    app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+            var response = new
+            {
+                status = report.Status.ToString(),
+                duration = report.TotalDuration.TotalMilliseconds + "ms",
+                checks = report.Entries.ToDictionary(
+                    e => e.Key,
+                    e => new
+                    {
+                        status = e.Value.Status.ToString(),
+                        duration = e.Value.Duration.TotalMilliseconds + "ms",
+                        description = e.Value.Description
+                    })
+            };
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response,
+                new JsonSerializerOptions { WriteIndented = true }));
+        }
+    });
+
+    app.Run();
 }
-
-// Middleware pipeline — order matters (top-to-bottom on request, bottom-to-top on response)
-app.UseMiddleware<GlobalExceptionHandlerMiddleware>();  // Catches all exceptions → JSON error responses (400/404/500)
-
-if (app.Environment.IsDevelopment())
+catch (Exception ex)
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-    app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
+    Log.Fatal(ex, "Application terminated unexpectedly");
 }
-
-app.UseHttpsRedirection();
-app.UseAuthentication();  // Must come BEFORE UseAuthorization
-app.UseAuthorization();
-app.MapControllers();
-
-app.Run();
+finally
+{
+    Log.CloseAndFlush();
+}

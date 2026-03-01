@@ -1,4 +1,5 @@
-﻿using JobMarketplace.Application.Common.Interfaces;
+﻿using JobMarketplace.Application.Common.DTOs;
+using JobMarketplace.Application.Common.Interfaces;
 using JobMarketplace.Domain.Entities;
 using MediatR;
 using System;
@@ -7,7 +8,7 @@ using System.Text;
 
 namespace JobMarketplace.Application.Features.Jobs.Queries.GetAllJobs
 {
-    public class GetAllJobsQueryHandler : IRequestHandler<GetAllJobsQuery, List<Job>>
+    public class GetAllJobsQueryHandler : IRequestHandler<GetAllJobsQuery, List<JobDto>>
     {
         private readonly IDapperQueryService _queryService;
 
@@ -16,9 +17,9 @@ namespace JobMarketplace.Application.Features.Jobs.Queries.GetAllJobs
             _queryService = queryService;
         }
 
-        public async Task<List<Job>> Handle(GetAllJobsQuery request, CancellationToken cancellationToken)
+        public async Task<List<JobDto>> Handle(GetAllJobsQuery request, CancellationToken cancellationToken)
         {
-            var jobs = await _queryService.QueryAsync<Job>(
+            var jobs = await _queryService.QueryAsync<JobDto>(
                 "sp_GetAllJobs", cancellationToken: cancellationToken);
             return jobs.ToList();
         }

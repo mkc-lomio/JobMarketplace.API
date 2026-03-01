@@ -1,4 +1,5 @@
-﻿using JobMarketplace.Application.Common.Interfaces;
+﻿using JobMarketplace.Application.Common.DTOs;
+using JobMarketplace.Application.Common.Interfaces;
 using JobMarketplace.Application.Common.Models;
 using JobMarketplace.Domain.Entities;
 using MediatR;
@@ -8,7 +9,7 @@ using System.Text;
 
 namespace JobMarketplace.Application.Features.Companies.Queries.GetCompanyById
 {
-    public class GetCompanyByIdQueryHandler : IRequestHandler<GetCompanyByIdQuery, Result<Company>>
+    public class GetCompanyByIdQueryHandler : IRequestHandler<GetCompanyByIdQuery, Result<CompanyDto>>
     {
         private readonly IDapperQueryService _queryService;
 
@@ -17,16 +18,16 @@ namespace JobMarketplace.Application.Features.Companies.Queries.GetCompanyById
             _queryService = queryService;
         }
 
-        public async Task<Result<Company>> Handle(GetCompanyByIdQuery request, CancellationToken cancellationToken)
+        public async Task<Result<CompanyDto>> Handle(GetCompanyByIdQuery request, CancellationToken cancellationToken)
         {
-            var company = await _queryService.QueryFirstOrDefaultAsync<Company>(
+            var company = await _queryService.QueryFirstOrDefaultAsync<CompanyDto>(
                 "sp_GetCompanyByPublicGuid",
                 new { PublicGuid = request.PublicGuid },
                 cancellationToken);
 
             return company is null
-                ? Result<Company>.Failure($"Company with Id '{request.PublicGuid}' not found.")
-                : Result<Company>.Success(company);
+                ? Result<CompanyDto>.Failure($"Company with Id '{request.PublicGuid}' not found.")
+                : Result<CompanyDto>.Success(company);
         }
     }
 }

@@ -1,0 +1,15 @@
+{
+  "title": "Senior .NET Developer",
+  "description": "Build and maintain microservices using .NET 10, Clean Architecture, and CQRS.",
+  "requirements": "5+ years C#/.NET, EF Core, SQL Server, REST APIs, unit testing",
+  "responsibilities": "Design APIs, code review, mentor juniors, optimize database queries",
+  "location": "Makati City, PH",
+  "isRemote": true,
+  "salaryMin": 120000,
+  "salaryMax": 180000,
+  "salaryCurrency": "PHP",
+  "jobType": 0,
+  "experienceLevel": 3,
+  "tags": "dotnet,csharp,cleanarchitecture,cqrs",
+  "companyPublicGuid": "<paste-company-guid>"
+}

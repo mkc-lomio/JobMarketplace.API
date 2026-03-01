@@ -5,11 +5,17 @@ using System.Text;
 
 namespace JobMarketplace.Infrastructure.Persistence
 {
+    /// <summary>
+    /// Reads .sql files embedded in this assembly and executes them on startup.
+    /// All SPs use CREATE OR ALTER — safe to run every time (idempotent).
+    /// </summary>
     public static class StoredProcedureMigrator
     {
         public static async Task DeployStoredProceduresAsync(ApplicationDbContext context)
         {
             var assembly = typeof(StoredProcedureMigrator).Assembly;
+
+            // Find all embedded .sql resources (configured in .csproj as EmbeddedResource)
             var resourceNames = assembly.GetManifestResourceNames()
                 .Where(r => r.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(r => r);
@@ -22,7 +28,7 @@ namespace JobMarketplace.Infrastructure.Persistence
                 using var reader = new StreamReader(stream);
                 var sql = await reader.ReadToEndAsync();
 
-                // Remove GO statements (not valid in ExecuteSqlRawAsync)
+                // Split on GO — SSMS understands it, but ExecuteSqlRawAsync does not
                 var batches = sql.Split(
                     new[] { "\nGO", "\r\nGO" },
                     StringSplitOptions.RemoveEmptyEntries);

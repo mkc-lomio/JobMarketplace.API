@@ -1,6 +1,6 @@
 # JobMarketplace API
 
-A .NET 10 Web API built with Clean Architecture, CQRS, MediatR, Repository Pattern, EF Core (writes), and Dapper + Stored Procedures (reads).
+A .NET 10 Web API built with Clean Architecture, CQRS, MediatR, Repository Pattern, EF Core (writes), and Dapper + Stored Procedures (reads). Secured with JWT authentication, refresh token rotation, and role-based authorization.
 
 ---
 
@@ -80,14 +80,17 @@ dotnet run
 
 On first run, the app will automatically:
 1. Create the `JobMarketplaceDB` database
-2. Create all tables (Companies, Jobs, JobApplications) with proper indexes and constraints
+2. Create all tables (Companies, Jobs, JobApplications, Users, RefreshTokens) with proper indexes and constraints
 3. Deploy all stored procedures (sp_GetAllCompanies, sp_GetAllJobs, etc.)
+4. Seed the default admin user and sample companies from embedded JSON data
 
 You should see in the console:
 
 ```
-Database 'JobMarketplaceDB' created successfully!
 Deployed 5 stored procedure(s) successfully.
+Seeded 1 user(s).
+Seeded 2 company(ies).
+Database 'JobMarketplaceDB' migrated successfully!
 ```
 
 ### 6. Open the API Documentation
@@ -108,19 +111,86 @@ This opens the **Scalar** API documentation UI where you can explore and test al
 
 ---
 
+## Authentication
+
+The API uses **JWT access tokens** (5-minute expiry) and **refresh tokens** (7-day expiry) with rotation. Most endpoints require authentication — you need to log in first and include the access token in every request.
+
+### Default Admin Account
+
+The app seeds a default admin user on first run:
+
+| Field | Value |
+|-------|-------|
+| Email | `admin@jobmarketplace.com` |
+| Password | `Admin@123!` |
+| Role | `Admin` |
+
+> **Change these credentials in production.** The seed data lives in `Infrastructure/SeedData/seed-users.json`.
+
+### Auth Flow
+
+```
+1. Login (POST /api/auth/login)      → get accessToken + refreshToken
+2. Use accessToken in requests       → Authorization: Bearer <token>
+3. Token expires (5 min)             → call POST /api/auth/refresh
+4. Refresh returns new token pair    → repeat from step 2
+5. Done for the day                  → call POST /api/auth/revoke (logout)
+```
+
+### Roles
+
+| Role | Can Do |
+|------|--------|
+| **Admin** | Everything |
+| **Employer** | Create/manage companies and jobs, view applications |
+| **JobSeeker** | Submit applications |
+
+---
+
 ## Testing the API
 
-### Using Scalar (Browser)
+### Step 1 — Log In
 
-The Scalar UI at `/scalar/v1` lets you send requests directly from the browser. Expand any endpoint, fill in the JSON body, and click **Send**.
+All protected endpoints require a Bearer token. Start by logging in:
 
-### Using curl
+```bash
+curl -X POST https://localhost:7219/api/auth/login \
+  -H "Content-Type: application/json" \
+  -k \
+  -d '{
+    "email": "admin@jobmarketplace.com",
+    "password": "Admin@123!"
+  }'
+```
 
-**1. Create a company:**
+Response:
+
+```json
+{
+  "isSuccess": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+    "refreshToken": "a1b2c3d4...",
+    "accessTokenExpiresAt": "2026-03-01T08:05:00Z",
+    "userPublicGuid": "3fa85f64-...",
+    "email": "admin@jobmarketplace.com",
+    "role": "Admin"
+  }
+}
+```
+
+**Copy the `accessToken`** — you'll include it in every subsequent request as:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+### Step 2 — Create a Company
 
 ```bash
 curl -X POST https://localhost:7219/api/companies \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <paste-access-token-here>" \
   -k \
   -d '{
     "name": "Acme Corp",
@@ -134,11 +204,12 @@ curl -X POST https://localhost:7219/api/companies \
 
 Copy the `publicGuid` from the response — you'll need it for the next step.
 
-**2. Create a job (use the company's publicGuid):**
+### Step 3 — Create a Job
 
 ```bash
 curl -X POST https://localhost:7219/api/jobs \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <paste-access-token-here>" \
   -k \
   -d '{
     "title": "Senior .NET Developer",
@@ -154,17 +225,37 @@ curl -X POST https://localhost:7219/api/jobs \
   }'
 ```
 
-**3. Get all active jobs:**
+### Step 4 — Get All Jobs
 
 ```bash
-curl https://localhost:7219/api/jobs -k
+curl https://localhost:7219/api/jobs \
+  -H "Authorization: Bearer <paste-access-token-here>" \
+  -k
 ```
 
-**4. Submit an application (use the job's publicGuid):**
+### Step 5 — Register a Job Seeker and Apply
+
+Register a new user with the `JobSeeker` role:
+
+```bash
+curl -X POST https://localhost:7219/api/auth/register \
+  -H "Content-Type: application/json" \
+  -k \
+  -d '{
+    "email": "juan@email.com",
+    "password": "Juan@123!",
+    "firstName": "Juan",
+    "lastName": "Dela Cruz",
+    "role": 0
+  }'
+```
+
+Use the **new access token** from the register response to submit an application:
 
 ```bash
 curl -X POST https://localhost:7219/api/applications \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <paste-jobseeker-access-token-here>" \
   -k \
   -d '{
     "jobPublicGuid": "<paste-job-guid-here>",
@@ -174,7 +265,47 @@ curl -X POST https://localhost:7219/api/applications \
   }'
 ```
 
+> **Note:** A JobSeeker token cannot create companies or jobs (403 Forbidden). An Employer token cannot submit applications. Only Admin can do everything.
+
+### Step 6 — Refresh an Expired Token
+
+When your access token expires (after 5 minutes), use the refresh token to get a new pair:
+
+```bash
+curl -X POST https://localhost:7219/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -k \
+  -d '{
+    "refreshToken": "<paste-refresh-token-here>"
+  }'
+```
+
+This returns a new `accessToken` and a new `refreshToken`. The old refresh token is revoked (single-use).
+
+### Step 7 — Logout (Revoke Token)
+
+```bash
+curl -X POST https://localhost:7219/api/auth/revoke \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <paste-access-token-here>" \
+  -k \
+  -d '{
+    "refreshToken": "<paste-refresh-token-here>"
+  }'
+```
+
 > **Note:** The `-k` flag tells curl to accept the self-signed development HTTPS certificate.
+
+---
+
+## Using Scalar UI (Browser)
+
+The Scalar UI at `/scalar/v1` lets you send requests directly from the browser. For protected endpoints:
+
+1. Call `POST /api/auth/login` first and copy the `accessToken` from the response
+2. Click the **Auth** or **Authorize** button in Scalar
+3. Enter: `Bearer <your-access-token>` (include the word "Bearer")
+4. Now all requests will include the token automatically
 
 ---
 
@@ -183,12 +314,10 @@ curl -X POST https://localhost:7219/api/applications \
 ```
 src/
 ├── JobMarketplace.Domain              ← Entities, Enums, Interfaces (zero dependencies)
-├── JobMarketplace.Application         ← CQRS Commands/Queries, Validation, Mapping
-├── JobMarketplace.Infrastructure      ← EF Core, Dapper, Repositories, Stored Procedures
-└── JobMarketplace.API                 ← Controllers, Middleware, Program.cs
+├── JobMarketplace.Application         ← CQRS Commands/Queries, Validation, Mapping, Auth
+├── JobMarketplace.Infrastructure      ← EF Core, Dapper, Repositories, JWT, BCrypt, Seed Data
+└── JobMarketplace.API                 ← Controllers, Middleware, JWT Config, Program.cs
 ```
-
-For a detailed walkthrough of the architecture, see the [Enterprise Architecture Article](./Enterprise-Architecture-NET10-Article.md).
 
 ---
 
@@ -200,27 +329,7 @@ For a detailed walkthrough of the architecture, see the [Enterprise Architecture
 | `dotnet run --project src/JobMarketplace.API` | Run the API from root directory |
 | `dotnet clean` | Clean build artifacts |
 | `dotnet test` | Run tests (when added) |
-
----
-
-## Troubleshooting
-
-**"Cannot connect to SQL Server"**
-- Make sure SQL Server is running (check Windows Services → SQL Server)
-- Verify the connection string matches your SQL Server instance name
-- If using SQL Server Express, change `Server=localhost` to `Server=localhost\SQLEXPRESS`
-
-**"Database already exists but tables are missing"**
-- Drop the database in SSMS: `DROP DATABASE JobMarketplaceDB;`
-- Re-run the app — it will recreate everything
-
-**"SSL connection error" or "certificate not trusted"**
-- This is normal in development. The `-k` flag in curl and `TrustServerCertificate=true` in the connection string handle this
-- In the browser, click "Advanced" → "Proceed" when you see the certificate warning
-
-**"Stored procedures not found"**
-- Make sure the `.sql` files are marked as `EmbeddedResource` in `JobMarketplace.Infrastructure.csproj`
-- Check the console output — it should say "Deployed 5 stored procedure(s) successfully."
+| `dotnet ef migrations add <Name> -p src/JobMarketplace.Infrastructure -s src/JobMarketplace.API` | Add a new EF Core migration |
 
 ---
 
@@ -232,9 +341,12 @@ For a detailed walkthrough of the architecture, see the [Enterprise Architecture
 | Clean Architecture | Project structure |
 | CQRS + MediatR | Command/Query separation |
 | Repository Pattern | Write abstraction (EF Core) |
-| EF Core 10 | ORM for writes |
+| EF Core 10 | ORM for writes + migrations |
 | Dapper | Micro-ORM for reads (stored procedures) |
 | SQL Server | Database |
 | FluentValidation | Input validation |
 | AutoMapper | Object mapping |
 | Scalar | API documentation |
+| BCrypt.Net | Password hashing (adaptive, salted) |
+| JWT Bearer | Stateless API authentication |
+| Refresh Token Rotation | Long-lived sessions with theft detection |

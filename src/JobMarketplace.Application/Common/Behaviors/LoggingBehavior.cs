@@ -6,6 +6,11 @@ using System.Text;
 
 namespace JobMarketplace.Application.Common.Behaviors
 {
+    /// <summary>
+    /// MediatR pipeline behavior — auto-logs every request and response.
+    /// Applies to all commands and queries. No log lines needed in handlers.
+    /// Pipeline: Request → ValidationBehavior → [LoggingBehavior] → Handler
+    /// </summary>
     public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
         where TRequest : notnull
     {
@@ -24,9 +29,7 @@ namespace JobMarketplace.Application.Common.Behaviors
             var requestName = typeof(TRequest).Name;
 
             _logger.LogInformation("Handling {RequestName} | {@Request}", requestName, request);
-
             var response = await next();
-
             _logger.LogInformation("Handled {RequestName} | {@Response}", requestName, response);
 
             return response;

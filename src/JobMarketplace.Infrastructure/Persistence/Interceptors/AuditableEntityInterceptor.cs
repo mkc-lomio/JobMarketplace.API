@@ -7,6 +7,10 @@ using System.Text;
 
 namespace JobMarketplace.Infrastructure.Persistence.Interceptors
 {
+    /// <summary>
+    /// EF Core interceptor — auto-stamps CreatedAt on insert, LastModifiedAt on update.
+    /// Fires before every SaveChanges. Developers never set these manually.
+    /// </summary>
     public class AuditableEntityInterceptor : SaveChangesInterceptor
     {
         public override InterceptionResult<int> SavingChanges(
@@ -31,14 +35,10 @@ namespace JobMarketplace.Infrastructure.Persistence.Interceptors
             foreach (var entry in context.ChangeTracker.Entries<BaseAuditableEntity>())
             {
                 if (entry.State == EntityState.Added)
-                {
                     entry.Entity.CreatedAt = DateTime.UtcNow;
-                }
 
                 if (entry.State == EntityState.Modified)
-                {
                     entry.Entity.LastModifiedAt = DateTime.UtcNow;
-                }
             }
         }
     }

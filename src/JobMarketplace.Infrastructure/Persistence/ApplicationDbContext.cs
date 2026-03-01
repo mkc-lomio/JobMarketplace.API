@@ -8,6 +8,11 @@ using System.Text;
 
 namespace JobMarketplace.Infrastructure.Persistence
 {
+    /// <summary>
+    /// EF Core DbContext — single gateway to the database for write operations.
+    /// Implements IApplicationDbContext (Domain interface) so inner layers don't depend on EF Core.
+    /// Read operations bypass this entirely — they go through DapperQueryService.
+    /// </summary>
     public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
@@ -19,7 +24,8 @@ namespace JobMarketplace.Infrastructure.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Applies all IEntityTypeConfiguration<T> from this assembly
+            // Auto-discovers all IEntityTypeConfiguration<T> in this assembly
+            // (CompanyConfiguration, JobConfiguration, JobApplicationConfiguration)
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
             base.OnModelCreating(modelBuilder);
         }

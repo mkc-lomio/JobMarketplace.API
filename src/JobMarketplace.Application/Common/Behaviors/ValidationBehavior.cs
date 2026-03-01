@@ -6,10 +6,16 @@ using System.Text;
 
 namespace JobMarketplace.Application.Common.Behaviors
 {
+    /// <summary>
+    /// MediatR pipeline behavior — runs all FluentValidation validators before the handler executes.
+    /// If any rule fails → throws ValidationException → caught by middleware → 400 Bad Request.
+    /// Handlers never receive invalid data. Add a new validator class and it's auto-discovered.
+    /// Pipeline: Request → [ValidationBehavior] → LoggingBehavior → Handler
+    /// </summary>
     public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
         where TRequest : notnull
     {
-        private readonly IEnumerable<IValidator<TRequest>> _validators;
+        private readonly IEnumerable<IValidator<TRequest>> _validators; // All validators for this request type (injected by DI)
 
         public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
         {
@@ -21,7 +27,7 @@ namespace JobMarketplace.Application.Common.Behaviors
             RequestHandlerDelegate<TResponse> next,
             CancellationToken cancellationToken)
         {
-            if (!_validators.Any()) return await next();
+            if (!_validators.Any()) return await next(); // No validators? Skip to handler.
 
             var context = new ValidationContext<TRequest>(request);
 

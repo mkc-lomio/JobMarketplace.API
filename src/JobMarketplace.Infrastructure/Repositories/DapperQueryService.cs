@@ -9,6 +9,12 @@ using System.Text;
 
 namespace JobMarketplace.Infrastructure.Repositories
 {
+    /// <summary>
+    /// Read side of CQRS — executes stored procedures via Dapper.
+    /// Opens its own SqlConnection (separate from EF Core) so reads never
+    /// interfere with write operations. Can point to a read replica later.
+    /// Interface (IDapperQueryService) lives in Application to keep Clean Architecture intact.
+    /// </summary>
     public class DapperQueryService : IDapperQueryService
     {
         private readonly string _connectionString;
@@ -21,6 +27,7 @@ namespace JobMarketplace.Infrastructure.Repositories
 
         private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
 
+        /// <summary>Executes SP, returns multiple rows (e.g., sp_GetAllJobs).</summary>
         public async Task<IEnumerable<T>> QueryAsync<T>(
             string storedProcedure,
             object? parameters = null,
@@ -33,6 +40,7 @@ namespace JobMarketplace.Infrastructure.Repositories
                 commandType: CommandType.StoredProcedure);
         }
 
+        /// <summary>Executes SP, returns single row or null (e.g., sp_GetCompanyByPublicGuid).</summary>
         public async Task<T?> QueryFirstOrDefaultAsync<T>(
             string storedProcedure,
             object? parameters = null,

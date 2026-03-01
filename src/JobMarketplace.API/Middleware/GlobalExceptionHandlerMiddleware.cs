@@ -4,6 +4,11 @@ using System.Text.Json;
 
 namespace JobMarketplace.API.Middleware
 {
+    /// <summary>
+    /// Catches all unhandled exceptions and returns consistent JSON error responses.
+    /// ValidationException → 400, NotFoundException → 404, everything else → 500.
+    /// Registered first in the pipeline so it wraps all controllers and handlers.
+    /// </summary>
     public class GlobalExceptionHandlerMiddleware
     {
         private readonly RequestDelegate _next;
@@ -33,6 +38,7 @@ namespace JobMarketplace.API.Middleware
         {
             context.Response.ContentType = "application/json";
 
+            // Pattern match exception type → HTTP status code + response body
             var (statusCode, response) = exception switch
             {
                 ValidationException validationEx => (
@@ -45,7 +51,7 @@ namespace JobMarketplace.API.Middleware
                 ),
                 _ => (
                     (int)HttpStatusCode.InternalServerError,
-                    (object)new { error = "An unexpected error occurred." }
+                    (object)new { error = "An unexpected error occurred." }  // Never expose internal details
                 )
             };
 

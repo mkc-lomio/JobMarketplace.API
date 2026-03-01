@@ -28,12 +28,15 @@ namespace JobMarketplace.API.Controllers
                 : BadRequest(result);
         }
 
+        /// <summary>
+        /// GET /api/companies?pageSize=20&cursor=0
+        /// </summary>
         [HttpGet]
         [Authorize(Roles = "Employer,Admin")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] int pageSize = 20, [FromQuery] long cursor = 0)
         {
-            var companies = await _mediator.Send(new GetAllCompaniesQuery());
-            return Ok(companies);
+            var result = await _mediator.Send(new GetAllCompaniesQuery(pageSize, cursor));
+            return Ok(result);
         }
 
         [HttpGet("{publicGuid:guid}")]

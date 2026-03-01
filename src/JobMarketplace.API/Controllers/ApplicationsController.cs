@@ -22,15 +22,23 @@ namespace JobMarketplace.API.Controllers
         public async Task<IActionResult> Create([FromBody] CreateApplicationCommand command)
         {
             var result = await _mediator.Send(command);
-            return result.IsSuccess ? Created("", result) : BadRequest(result);
+            return result.IsSuccess
+                ? Ok(result)
+                : BadRequest(result);
         }
 
+        /// <summary>
+        /// GET /api/applications/by-job/{jobPublicGuid}?pageSize=20&cursor=0
+        /// </summary>
         [HttpGet("by-job/{jobPublicGuid:guid}")]
         [Authorize(Roles = "Employer,Admin")]
-        public async Task<IActionResult> GetByJob(Guid jobPublicGuid)
+        public async Task<IActionResult> GetByJob(
+            Guid jobPublicGuid,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] long cursor = 0)
         {
-            var applications = await _mediator.Send(new GetApplicationsByJobQuery(jobPublicGuid));
-            return Ok(applications);
+            var result = await _mediator.Send(new GetApplicationsByJobQuery(jobPublicGuid, pageSize, cursor));
+            return Ok(result);
         }
     }
 }

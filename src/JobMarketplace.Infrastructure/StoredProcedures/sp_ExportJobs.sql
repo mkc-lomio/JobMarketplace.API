@@ -1,12 +1,9 @@
-CREATE OR ALTER PROCEDURE [dbo].[sp_GetAllJobs]
-    @PageSize INT = 20,
-    @Cursor BIGINT = 0
+CREATE OR ALTER PROCEDURE [dbo].[sp_ExportJobs]
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT TOP (@PageSize + 1)          -- Fetch one extra to determine HasMore
-        j.Id,
+    SELECT
         j.PublicGuid,
         j.Title,
         j.Location,
@@ -17,12 +14,11 @@ BEGIN
         j.JobType,
         j.ExperienceLevel,
         j.CreatedAt,
-        c.PublicGuid AS CompanyPublicGuid,
-        c.Name AS CompanyName
+        c.Name AS CompanyName,
+        c.Industry AS CompanyIndustry
     FROM dbo.Jobs j
     INNER JOIN dbo.Companies c ON j.CompanyId = c.Id
     WHERE j.Status = 'Active'
-      AND j.Id > @Cursor
     ORDER BY j.Id;
 END
 GO

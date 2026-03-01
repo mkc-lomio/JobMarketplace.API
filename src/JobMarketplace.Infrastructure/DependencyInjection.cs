@@ -59,6 +59,13 @@ namespace JobMarketplace.Infrastructure
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IPasswordHasher, PasswordHasher>();
 
+            // Health checks — SQL Server connectivity
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+            services.AddHealthChecks()
+                .AddSqlServer(connectionString, name: "sqlserver", tags: ["db", "ready"]);
+
             return services;
         }
     }

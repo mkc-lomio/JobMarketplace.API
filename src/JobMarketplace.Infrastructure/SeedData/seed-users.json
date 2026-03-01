@@ -1,0 +1,16 @@
+[
+  {
+    "email": "admin@jobmarketplace.com",
+    "password": "Admin@123!",
+    "firstName": "System",
+    "lastName": "Administrator",
+    "role": "Admin"
+  },
+  {
+    "email": "employer@test.com",
+    "password": "Test@123!",
+    "firstName": "Test",
+    "lastName": "Employer",
+    "role": "Employer"
+  }
+]

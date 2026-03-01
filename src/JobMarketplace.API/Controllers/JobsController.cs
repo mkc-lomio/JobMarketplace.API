@@ -4,6 +4,7 @@ using JobMarketplace.Application.Features.Jobs.Commands.UpdateJob;
 using JobMarketplace.Application.Features.Jobs.Queries.GetAllJobs;
 using JobMarketplace.Application.Features.Jobs.Queries.GetJobById;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobMarketplace.API.Controllers
@@ -20,6 +21,7 @@ namespace JobMarketplace.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Employer,Admin")]
         public async Task<IActionResult> Create([FromBody] CreateJobCommand command)
         {
             var result = await _mediator.Send(command);
@@ -29,6 +31,7 @@ namespace JobMarketplace.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Employer,Admin")]
         public async Task<IActionResult> GetAll()
         {
             var jobs = await _mediator.Send(new GetAllJobsQuery());
@@ -36,6 +39,7 @@ namespace JobMarketplace.API.Controllers
         }
 
         [HttpGet("{publicGuid:guid}")]
+        [Authorize(Roles = "Employer,Admin")]
         public async Task<IActionResult> GetById(Guid publicGuid)
         {
             var result = await _mediator.Send(new GetJobByIdQuery(publicGuid));
@@ -43,6 +47,7 @@ namespace JobMarketplace.API.Controllers
         }
 
         [HttpPut("{publicGuid:guid}")]
+        [Authorize(Roles = "Employer,Admin")]
         public async Task<IActionResult> Update(Guid publicGuid, [FromBody] UpdateJobCommand command)
         {
             if (publicGuid != command.PublicGuid)
@@ -53,6 +58,7 @@ namespace JobMarketplace.API.Controllers
         }
 
         [HttpDelete("{publicGuid:guid}")]
+        [Authorize(Roles = "Employer,Admin")]
         public async Task<IActionResult> Delete(Guid publicGuid)
         {
             var result = await _mediator.Send(new DeleteJobCommand(publicGuid));

@@ -1,11 +1,12 @@
-﻿using JobMarketplace.Domain.Interfaces;
+﻿using JobMarketplace.Application.Common.Interfaces;
+using JobMarketplace.Domain.Interfaces;
 using JobMarketplace.Infrastructure.Persistence;
 using JobMarketplace.Infrastructure.Persistence.Interceptors;
 using JobMarketplace.Infrastructure.Repositories;
-using Microsoft.Extensions.Configuration;
+using JobMarketplace.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using JobMarketplace.Application.Common.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -21,8 +22,11 @@ namespace JobMarketplace.Infrastructure
         public static IServiceCollection AddInfrastructureServices(
             this IServiceCollection services, IConfiguration configuration)
         {
+            // HttpContextAccessor — needed by AuditableEntityInterceptor to read JWT claims
+            services.AddHttpContextAccessor();
+
             // Audit interceptor — auto-stamps CreatedAt/LastModifiedAt on every SaveChanges
-            services.AddSingleton<AuditableEntityInterceptor>();
+            services.AddScoped<AuditableEntityInterceptor>();
 
             // EF Core DbContext — SQL Server + audit interceptor
             services.AddDbContext<ApplicationDbContext>((sp, options) =>
@@ -45,9 +49,15 @@ namespace JobMarketplace.Infrastructure
             services.AddScoped<ICompanyRepository, CompanyRepository>();
             services.AddScoped<IJobRepository, JobRepository>();
             services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
             // Dapper — separate SqlConnection, used by Query handlers (reads via stored procedures)
             services.AddScoped<IDapperQueryService, DapperQueryService>();
+
+            // Auth services
+            services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped<IPasswordHasher, PasswordHasher>();
 
             return services;
         }

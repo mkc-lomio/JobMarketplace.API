@@ -21,6 +21,8 @@ namespace JobMarketplace.Infrastructure.Persistence
         public DbSet<Company> Companies => Set<Company>();
         public DbSet<Job> Jobs => Set<Job>();
         public DbSet<JobApplication> JobApplications => Set<JobApplication>();
+        public DbSet<User> Users => Set<User>();
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

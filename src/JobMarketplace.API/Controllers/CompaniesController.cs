@@ -2,6 +2,7 @@
 using JobMarketplace.Application.Features.Companies.Queries.GetAllCompanies;
 using JobMarketplace.Application.Features.Companies.Queries.GetCompanyById;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JobMarketplace.API.Controllers
@@ -18,6 +19,7 @@ namespace JobMarketplace.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Employer,Admin")]
         public async Task<IActionResult> Create([FromBody] CreateCompanyCommand command)
         {
             var result = await _mediator.Send(command);
@@ -27,6 +29,7 @@ namespace JobMarketplace.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Employer,Admin")]
         public async Task<IActionResult> GetAll()
         {
             var companies = await _mediator.Send(new GetAllCompaniesQuery());
@@ -34,6 +37,7 @@ namespace JobMarketplace.API.Controllers
         }
 
         [HttpGet("{publicGuid:guid}")]
+        [Authorize(Roles = "Employer,Admin")]
         public async Task<IActionResult> GetById(Guid publicGuid)
         {
             var result = await _mediator.Send(new GetCompanyByIdQuery(publicGuid));

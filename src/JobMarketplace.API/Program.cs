@@ -1,9 +1,14 @@
 using JobMarketplace.API.Middleware;
 using JobMarketplace.Application;
+using JobMarketplace.Application.Common;
+using JobMarketplace.Application.Common.Interfaces;
 using JobMarketplace.Infrastructure;
 using JobMarketplace.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +16,31 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplicationServices();                          // MediatR, FluentValidation, AutoMapper
 builder.Services.AddInfrastructureServices(builder.Configuration);  // EF Core, Repositories, Dapper
 
+// JWT Authentication
+var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()!;
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings.Issuer,
+        ValidAudience = jwtSettings.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
@@ -22,6 +52,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await db.Database.MigrateAsync();                               // Creates DB if missing, applies new migrations if exists
     await StoredProcedureMigrator.DeployStoredProceduresAsync(db);  // CREATE OR ALTER — idempotent, safe every startup
+    var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+    await DbSeeder.SeedAsync(db, passwordHasher);
     Console.WriteLine("Database 'JobMarketplaceDB' migrated successfully!");
 }
 
@@ -36,6 +68,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();  // Must come BEFORE UseAuthorization
 app.UseAuthorization();
 app.MapControllers();
 

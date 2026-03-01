@@ -1,25 +1,23 @@
 CREATE OR ALTER PROCEDURE [dbo].[sp_GetApplicationsByJobPublicGuid]
-    @JobPublicGuid UNIQUEIDENTIFIER
+    @JobPublicGuid UNIQUEIDENTIFIER,
+    @PageSize INT = 20,
+    @Cursor BIGINT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT
+    SELECT TOP (@PageSize + 1)
         a.Id,
         a.PublicGuid,
         a.ApplicantName,
         a.ApplicantEmail,
-        a.ApplicantPhone,
-        a.ResumeUrl,
-        a.CoverLetter,
         a.Status,
-        a.Notes,
         a.AppliedAt,
-        a.JobId,
         a.CreatedAt
     FROM dbo.JobApplications a
     INNER JOIN dbo.Jobs j ON a.JobId = j.Id
     WHERE j.PublicGuid = @JobPublicGuid
-    ORDER BY a.AppliedAt DESC;
+      AND a.Id > @Cursor
+    ORDER BY a.Id;
 END
 GO

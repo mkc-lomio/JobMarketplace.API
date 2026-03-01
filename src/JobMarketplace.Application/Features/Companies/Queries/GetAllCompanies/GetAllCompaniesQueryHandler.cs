@@ -1,5 +1,6 @@
 ﻿using JobMarketplace.Application.Common.DTOs;
-using JobMarketplace.Application.Common.Interfaces;  
+using JobMarketplace.Application.Common.Interfaces;
+using JobMarketplace.Application.Common.Models;
 using JobMarketplace.Domain.Entities;
 using MediatR;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using System.Text;
 
 namespace JobMarketplace.Application.Features.Companies.Queries.GetAllCompanies
 {
-    public class GetAllCompaniesQueryHandler : IRequestHandler<GetAllCompaniesQuery, List<CompanyDto>>
+    public class GetAllCompaniesQueryHandler : IRequestHandler<GetAllCompaniesQuery, PagedResult<CompanyListDto>>
     {
         private readonly IDapperQueryService _queryService;
 
@@ -16,12 +17,14 @@ namespace JobMarketplace.Application.Features.Companies.Queries.GetAllCompanies
             _queryService = queryService;
         }
 
-        public async Task<List<CompanyDto>> Handle(GetAllCompaniesQuery request, CancellationToken cancellationToken)
+        public async Task<PagedResult<CompanyListDto>> Handle(GetAllCompaniesQuery request, CancellationToken cancellationToken)
         {
-            // Dapper maps SP columns directly to CompanyDto — Id is excluded because the DTO doesn't have it
-            var companies = await _queryService.QueryAsync<CompanyDto>(
-                "sp_GetAllCompanies", cancellationToken: cancellationToken);
-            return companies.ToList();
+            var companies = await _queryService.QueryAsync<CompanyListDto>(
+                "sp_GetAllCompanies",
+                new { request.PageSize, request.Cursor },
+                cancellationToken);
+
+            return PagedResult<CompanyListDto>.Create(companies.ToList(), request.PageSize, c => c.Id);
         }
     }
 }

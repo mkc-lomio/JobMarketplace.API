@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/resources/">
+    <Project Path="resources/JobMarketplace.BulkSeeder/JobMarketplace.BulkSeeder.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/JobMarketplace.API/JobMarketplace.API.csproj" />
     <Project Path="src/JobMarketplace.Application/JobMarketplace.Application.csproj" />

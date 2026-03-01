@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <Folder Include="Assets\JSON\" />
+    <Folder Include="Assets\SQL\" />
   </ItemGroup>
 
 </Project>

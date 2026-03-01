@@ -7,5 +7,6 @@
     <Project Path="src/JobMarketplace.Application/JobMarketplace.Application.csproj" />
     <Project Path="src/JobMarketplace.Domain/JobMarketplace.Domain.csproj" />
     <Project Path="src/JobMarketplace.Infrastructure/JobMarketplace.Infrastructure.csproj" />
+    <Project Path="src/JobMarketplace.Tests/JobMarketplace.Tests.csproj" />
   </Folder>
 </Solution>

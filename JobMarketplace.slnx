@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/JobMarketplace.API/JobMarketplace.API.csproj" />
+    <Project Path="src/JobMarketplace.Application/JobMarketplace.Application.csproj" />
+    <Project Path="src/JobMarketplace.Domain/JobMarketplace.Domain.csproj" />
+    <Project Path="src/JobMarketplace.Infrastructure/JobMarketplace.Infrastructure.csproj" />
+  </Folder>
+</Solution>

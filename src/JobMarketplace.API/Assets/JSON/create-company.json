@@ -1,0 +1,11 @@
+{
+  "name": "Acme Corp",
+  "description": "Leading cloud infrastructure and DevOps solutions provider in Southeast Asia.",
+  "website": "https://acmecorp.com",
+  "industry": "Technology",
+  "location": "Makati City, PH",
+  "employeeCount": 250,
+  "foundedYear": 2018,
+  "contactEmail": "careers@acmecorp.com",
+  "contactPhone": "+63-2-8888-1234"
+}

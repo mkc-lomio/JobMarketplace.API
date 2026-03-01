@@ -20,4 +20,8 @@
     <ProjectReference Include="..\JobMarketplace.Infrastructure\JobMarketplace.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Assets\JSON\" />
+  </ItemGroup>
+
 </Project>

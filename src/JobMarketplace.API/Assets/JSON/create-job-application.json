@@ -1,0 +1,8 @@
+{
+  "jobPublicGuid": "<paste-job-guid>",
+  "applicantName": "Juan Dela Cruz",
+  "applicantEmail": "juan.delacruz@gmail.com",
+  "applicantPhone": "+63-917-123-4567",
+  "resumeUrl": "https://drive.google.com/file/juan-resume.pdf",
+  "coverLetter": "I have 6 years of experience building enterprise .NET APIs with Clean Architecture and CQRS."
+}

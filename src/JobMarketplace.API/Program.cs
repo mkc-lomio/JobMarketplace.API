@@ -25,6 +25,8 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithThreadId()
     .CreateLogger();
 
+const string AngularCorsPolicy = "AngularLocalPolicy";
+
 try
 {
     Log.Information("Starting JobMarketplace API...");
@@ -66,6 +68,19 @@ try
     builder.Services.AddControllers();
     builder.Services.AddOpenApi();
 
+    // ─── CORS ────────────────────────────────────────────────────
+    // Whitelists the Angular dev server. In production, replace with your deployed URL.
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy(AngularCorsPolicy, policy =>
+        {
+            policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+    });
+
     var app = builder.Build();
 
     // Apply pending migrations + deploy stored procedures on startup
@@ -97,6 +112,7 @@ try
     }
 
     app.UseHttpsRedirection();
+    app.UseCors(AngularCorsPolicy);   // must be before UseAuthentication + UseAuthorization
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();

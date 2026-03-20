@@ -4,6 +4,50 @@ A .NET 10 Web API built with Clean Architecture, CQRS, MediatR, Repository Patte
 
 ---
 
+## Architecture
+
+Clean Architecture enforces a strict dependency rule: code dependencies can only point inward. The outer layers (API, Infrastructure) depend on the inner layers (Application, Domain) — never the reverse. This means your core business logic has zero knowledge of ASP.NET, Entity Framework, SQL Server, or any other framework or infrastructure concern.
+
+The practical benefits for this project:
+
+- **Testability** — `Application` and `Domain` have no framework dependencies, so handlers and validators can be unit tested without spinning up a database or HTTP server.
+- **Replaceability** — swapping SQL Server for PostgreSQL, or EF Core for a different ORM, only touches `Infrastructure`. Nothing in `Application` or `Domain` changes.
+- **Separation of concerns** — FluentValidation lives in `Application`, BCrypt lives in `Infrastructure`, controllers live in `API`. Each layer has one job and owns it completely.
+- **Explicit contracts** — `Domain` defines the repository interfaces (`IJobRepository`, `IUserRepository`, etc.). `Infrastructure` implements them. `Application` only ever sees the interface — it never imports EF Core directly.
+
+### Clean Architecture — Layer Structure
+
+![Clean Architecture Layer Structure](./assets/jobmarketplace_clean_architecture_structure.svg)
+
+The solution is organized into four concentric layers. Dependencies always point inward — outer layers know about inner ones, never the reverse.
+
+| Layer | Project | Responsibility |
+|-------|---------|----------------|
+| **Presentation** | `JobMarketplace.API` | Controllers, middleware, JWT config, Scalar docs |
+| **Application** | `JobMarketplace.Application` | CQRS commands/queries, FluentValidation, AutoMapper, DTOs |
+| **Domain** | `JobMarketplace.Domain` | Entities, enums, repository interfaces — zero dependencies |
+| **Infrastructure** | `JobMarketplace.Infrastructure` | EF Core, Dapper, repositories, TokenService, PasswordHasher |
+
+### Request Flow
+
+![Request Flow Diagram](./assets/jobmarketplace_request_flow.svg)
+
+Every HTTP request passes through this pipeline:
+
+```
+HTTP Client
+  → Middleware (CorrelationId → GlobalExceptionHandler → RequestLogging)
+  → JWT Auth + Role check
+  → Controller action
+  → MediatR dispatcher (_mediator.Send)
+  → Pipeline behaviors (LoggingBehavior → ValidationBehavior)
+  → Command / Query handler
+  → Repository (EF Core writes) or DapperQueryService (reads / streaming)
+  → SQL Server — JobMarketplaceDB
+```
+
+---
+
 ## Prerequisites
 
 Before you begin, make sure you have the following installed on your machine:
@@ -312,6 +356,10 @@ The Scalar UI at `/scalar/v1` lets you send requests directly from the browser. 
 ## Project Structure
 
 ```
+assets/
+├── jobmarketplace_clean_architecture_structure.svg  ← Layer structure diagram
+└── jobmarketplace_request_flow.svg                  ← Request flow diagram
+
 src/
 ├── JobMarketplace.Domain              ← Entities, Enums, Interfaces (zero dependencies)
 ├── JobMarketplace.Application         ← CQRS Commands/Queries, Validation, Mapping, Auth

@@ -4,6 +4,38 @@ A .NET 10 Web API built with Clean Architecture, CQRS, MediatR, Repository Patte
 
 ---
 
+## Table of Contents
+
+- [Architecture](#architecture)
+  - [Clean Architecture — Layer Structure](#clean-architecture--layer-structure)
+  - [Request Flow](#request-flow)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+  - [1. Clone the Repository](#1-clone-the-repository)
+  - [2. Make Sure SQL Server is Running](#2-make-sure-sql-server-is-running)
+  - [3. Check the Connection String](#3-check-the-connection-string)
+  - [4. Build the Solution](#4-build-the-solution)
+  - [5. Run the API](#5-run-the-api)
+  - [6. Open the API Documentation](#6-open-the-api-documentation)
+- [Authentication](#authentication)
+  - [Default Admin Account](#default-admin-account)
+  - [Auth Flow](#auth-flow)
+  - [Roles](#roles)
+- [Testing the API](#testing-the-api)
+  - [Step 1 — Log In](#step-1--log-in)
+  - [Step 2 — Create a Company](#step-2--create-a-company)
+  - [Step 3 — Create a Job](#step-3--create-a-job)
+  - [Step 4 — Get All Jobs](#step-4--get-all-jobs)
+  - [Step 5 — Register a Job Seeker and Apply](#step-5--register-a-job-seeker-and-apply)
+  - [Step 6 — Refresh an Expired Token](#step-6--refresh-an-expired-token)
+  - [Step 7 — Logout (Revoke Token)](#step-7--logout-revoke-token)
+- [Using Scalar UI (Browser)](#using-scalar-ui-browser)
+- [Project Structure](#project-structure)
+- [Useful Commands](#useful-commands)
+- [Tech Stack](#tech-stack)
+
+---
+
 ## Architecture
 
 Clean Architecture enforces a strict dependency rule: code dependencies can only point inward. The outer layers (API, Infrastructure) depend on the inner layers (Application, Domain) — never the reverse. This means your core business logic has zero knowledge of ASP.NET, Entity Framework, SQL Server, or any other framework or infrastructure concern.
@@ -17,7 +49,7 @@ The practical benefits for this project:
 
 ### Clean Architecture — Layer Structure
 
-![Clean Architecture Layer Structure](./assets/jobmarketplace_clean_architecture_structure.svg)
+![Clean Architecture Layer Structure](./JobMarketplace.API/assets/jobmarketplace_clean_architecture_structure.svg)
 
 The solution is organized into four concentric layers. Dependencies always point inward — outer layers know about inner ones, never the reverse.
 
@@ -30,7 +62,7 @@ The solution is organized into four concentric layers. Dependencies always point
 
 ### Request Flow
 
-![Request Flow Diagram](./assets/jobmarketplace_request_flow.svg)
+![Request Flow Diagram](./JobMarketplace.API/assets/jobmarketplace_request_flow.svg)
 
 Every HTTP request passes through this pipeline:
 

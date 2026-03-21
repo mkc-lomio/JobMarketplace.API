@@ -49,7 +49,7 @@ The practical benefits for this project:
 
 ### Clean Architecture — Layer Structure
 
-![Clean Architecture Layer Structure](./JobMarketplace.API/assets/jobmarketplace_clean_architecture_structure.svg)
+![Clean Architecture Layer Structure](./assets/jobmarketplace_clean_architecture_structure.svg)
 
 The solution is organized into four concentric layers. Dependencies always point inward — outer layers know about inner ones, never the reverse.
 
@@ -62,7 +62,7 @@ The solution is organized into four concentric layers. Dependencies always point
 
 ### Request Flow
 
-![Request Flow Diagram](./JobMarketplace.API/assets/jobmarketplace_request_flow.svg)
+![Request Flow Diagram](./assets/jobmarketplace_request_flow.svg)
 
 Every HTTP request passes through this pipeline:
 

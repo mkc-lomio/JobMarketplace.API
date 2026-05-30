@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using JobMarketplace.Application.Features.Applications.Commands.CreateApplication;
 using JobMarketplace.Application.Features.Companies.Commands.CreateCompany;
+using JobMarketplace.Application.Features.Countries.Commands.CreateCountry;
 using JobMarketplace.Application.Features.Jobs.Commands.CreateJob;
 using JobMarketplace.Application.Features.Jobs.Commands.UpdateJob;
 using JobMarketplace.Domain.Entities;
@@ -31,6 +32,9 @@ namespace JobMarketplace.Application.Common.Mappings
             // Application
             CreateMap<CreateApplicationCommand, JobApplication>()
                 .ForMember(dest => dest.JobId, opt => opt.Ignore());  // Set manually in handler
+
+            // Country
+            CreateMap<CreateCountryCommand, Country>();
         }
     }
 }

@@ -48,6 +48,7 @@ namespace JobMarketplace.Infrastructure
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddScoped<ICompanyRepository, CompanyRepository>();
             services.AddScoped<IJobRepository, JobRepository>();
+            services.AddScoped<ICountryRepository, CountryRepository>();
             services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

@@ -1,9 +1,6 @@
-﻿using JobMarketplace.Application.Features.Applications.Commands.CreateApplication;
-using JobMarketplace.Application.Features.Countries.Commands.CreateCountry;
-using JobMarketplace.Application.Features.Countries.Commands.DeleteCountry;
-using JobMarketplace.Application.Features.Countries.Commands.UpdateCountry;
-using JobMarketplace.Application.Features.Jobs.Commands.DeleteJob;
-using JobMarketplace.Application.Features.Jobs.Commands.UpdateJob;
+﻿using JobMarketplace.Application.Features.Skills.Commands.CreateSkill;
+using JobMarketplace.Application.Features.Skills.Commands.UpdateSkill;
+using JobMarketplace.Application.Features.Skills.Commands.DeleteSkill;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,11 +9,11 @@ namespace JobMarketplace.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class CountryController : ControllerBase
+    public class SkillController : ControllerBase
     {
         private readonly IMediator _mediator;
-    
-        public CountryController(IMediator mediator)
+
+        public SkillController(IMediator mediator)
         {
             _mediator = mediator;
         }
@@ -24,7 +21,7 @@ namespace JobMarketplace.API.Controllers
         [HttpPost]
         //  [Authorize(Roles = "JobSeeker,Admin")]
         [AllowAnonymous]
-        public async Task<IActionResult> Create([FromBody] CreateCountryCommand command)
+        public async Task<IActionResult> Create([FromBody] CreateSkillCommand command)
         {
             var result = await _mediator.Send(command);
             return result.IsSuccess
@@ -33,9 +30,8 @@ namespace JobMarketplace.API.Controllers
         }
 
         [HttpPut("{publicGuid:guid}")]
-        //[Authorize(Roles = "Employer,Admin")]
         [AllowAnonymous]
-        public async Task<IActionResult> Update(Guid publicGuid, [FromBody] UpdateCountryCommand command)
+        public async Task<IActionResult> Update(Guid publicGuid, [FromBody] UpdateSkillCommand command)
         {
             if (publicGuid != command.PublicGuid)
                 return BadRequest(new { error = "Route PublicGuid and body PublicGuid mismatch." });
@@ -49,7 +45,7 @@ namespace JobMarketplace.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Delete(Guid publicGuid)
         {
-            var result = await _mediator.Send(new DeleteCountryCommand(publicGuid));
+            var result = await _mediator.Send(new DeleteSkillCommand(publicGuid));
             return result.IsSuccess ? NoContent() : NotFound(result);
         }
     }

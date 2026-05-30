@@ -2,8 +2,10 @@
 using JobMarketplace.Application.Features.Applications.Commands.CreateApplication;
 using JobMarketplace.Application.Features.Companies.Commands.CreateCompany;
 using JobMarketplace.Application.Features.Countries.Commands.CreateCountry;
+using JobMarketplace.Application.Features.Countries.Commands.UpdateCountry;
 using JobMarketplace.Application.Features.Jobs.Commands.CreateJob;
 using JobMarketplace.Application.Features.Jobs.Commands.UpdateJob;
+using JobMarketplace.Application.Features.Skills.Commands.CreateSkill;
 using JobMarketplace.Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -35,6 +37,15 @@ namespace JobMarketplace.Application.Common.Mappings
 
             // Country
             CreateMap<CreateCountryCommand, Country>();
+
+            CreateMap<UpdateCountryCommand, Country>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.PublicGuid, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedBy, opt => opt.Ignore());
+
+            // Skill
+            CreateMap<CreateSkillCommand, Skill>();
         }
     }
 }

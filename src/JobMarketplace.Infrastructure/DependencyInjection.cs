@@ -51,6 +51,7 @@ namespace JobMarketplace.Infrastructure
             services.AddScoped<ICountryRepository, CountryRepository>();
             services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<ISkillRepository, SkillRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
             // Dapper — separate SqlConnection, used by Query handlers (reads via stored procedures)

@@ -33,9 +33,10 @@ namespace JobMarketplace.Infrastructure.Services
 
             var claims = new[]
             {
+                new Claim(JwtRegisteredClaimNames.Name, user.FirstName.ToString()),
                 new Claim(JwtRegisteredClaimNames.Sub, user.PublicGuid.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role.ToString()),
+                new Claim("role", user.Role.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())  // Unique token ID
             };
 

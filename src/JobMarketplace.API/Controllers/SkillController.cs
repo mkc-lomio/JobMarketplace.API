@@ -1,6 +1,8 @@
-﻿using JobMarketplace.Application.Features.Skills.Commands.CreateSkill;
-using JobMarketplace.Application.Features.Skills.Commands.UpdateSkill;
+﻿using JobMarketplace.Application.Features.Jobs.Queries.GetAllJobs;
+using JobMarketplace.Application.Features.Skills.Commands.CreateSkill;
 using JobMarketplace.Application.Features.Skills.Commands.DeleteSkill;
+using JobMarketplace.Application.Features.Skills.Commands.UpdateSkill;
+using JobMarketplace.Application.Features.Skills.Queries.GetAllSkills;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -47,6 +49,14 @@ namespace JobMarketplace.API.Controllers
         {
             var result = await _mediator.Send(new DeleteSkillCommand(publicGuid));
             return result.IsSuccess ? NoContent() : NotFound(result);
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAll([FromQuery] int pageSize = 20, [FromQuery] long cursor = 0)
+        {
+            var result = await _mediator.Send(new GetAllSkillsQuery(pageSize, cursor));
+            return Ok(result);
         }
     }
 }

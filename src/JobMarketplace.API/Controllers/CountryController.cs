@@ -22,8 +22,8 @@ namespace JobMarketplace.API.Controllers
         }
 
         [HttpPost]
-        //  [Authorize(Roles = "JobSeeker,Admin")]
-        [AllowAnonymous]
+        [Authorize(Roles = "JobSeeker,Admin")]
+        //[AllowAnonymous]
         public async Task<IActionResult> Create([FromBody] CreateCountryCommand command)
         {
             var result = await _mediator.Send(command);

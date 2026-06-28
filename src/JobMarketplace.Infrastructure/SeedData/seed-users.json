@@ -12,5 +12,19 @@
     "firstName": "Test",
     "lastName": "Employer",
     "role": "Employer"
+  },
+  {
+    "email": "employer@test.com",
+    "password": "Test@123!",
+    "firstName": "Test",
+    "lastName": "Employer",
+    "role": "Employer"
+  },
+  {
+    "email": "marckenneth@test.com",
+    "password": "Test@123!",
+    "firstName": "Test",
+    "lastName": "Employer",
+    "role": "Employer"
   }
 ]

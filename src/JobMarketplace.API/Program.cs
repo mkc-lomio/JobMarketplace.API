@@ -87,7 +87,7 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        await db.Database.MigrateAsync();
+        await db.Database.MigrateAsync(); // create a database
         await StoredProcedureMigrator.DeployStoredProceduresAsync(db);
         var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
         await DbSeeder.SeedAsync(db, passwordHasher);

@@ -14,6 +14,9 @@
 
   <ItemGroup>
     <Folder Include="Features\Countries\Queries\" />
+    <Folder Include="Features\Transactions\Commands\CreateTransaction\" />
+    <Folder Include="Features\Transactions\Models\" />
+    <Folder Include="Features\Users\C\" />
   </ItemGroup>
 
   <PropertyGroup>

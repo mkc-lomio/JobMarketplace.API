@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using JobMarketplace.Application.Common.ViewModels;
 using JobMarketplace.Application.Features.Applications.Commands.CreateApplication;
 using JobMarketplace.Application.Features.Companies.Commands.CreateCompany;
 using JobMarketplace.Application.Features.Countries.Commands.CreateCountry;
@@ -6,6 +7,7 @@ using JobMarketplace.Application.Features.Countries.Commands.UpdateCountry;
 using JobMarketplace.Application.Features.Jobs.Commands.CreateJob;
 using JobMarketplace.Application.Features.Jobs.Commands.UpdateJob;
 using JobMarketplace.Application.Features.Skills.Commands.CreateSkill;
+using JobMarketplace.Application.Features.Transactions.Commands;
 using JobMarketplace.Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -46,6 +48,10 @@ namespace JobMarketplace.Application.Common.Mappings
 
             // Skill
             CreateMap<CreateSkillCommand, Skill>();
+
+            //Transaction
+            CreateMap<CreateCountryViewModel, Country>();
+            CreateMap<CreateSkillViewModel, Skill>();
         }
     }
 }

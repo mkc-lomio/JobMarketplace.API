@@ -25,12 +25,19 @@
     }
   },
   "$schema": "https://json.schemastore.org/launchsettings.json",
+  "IIS Express": {
+    "commandName": "IISExpress",
+    "launchBrowser": true,
+    "environmentVariables": {
+      "ASPNETCORE_ENVIRONMENT": "Development"
+    }
+  },
   "iisSettings": {
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:63195/",
-      "sslPort": 44323
+      "applicationUrl": "http://localhost:5158/",
+      "sslPort": 0 // ← set to 0 to disable SSL
     }
   }
 }

@@ -72,7 +72,7 @@ BEGIN
         LEFT JOIN dbo.JobApplications a ON a.JobId = j.Id
         WHERE j.Status = 'Active'
           AND j.Id > @Cursor
-          AND CONTAINS((j.Title, j.Description), @SearchTerm)
+         -- AND CONTAINS((j.Title, j.Description), @SearchTerm) -- using free text
           AND (@Location IS NULL OR j.Location = @Location)
           AND (@JobType IS NULL OR j.JobType = @JobType)
           AND (@ExperienceLevel IS NULL OR j.ExperienceLevel = @ExperienceLevel)

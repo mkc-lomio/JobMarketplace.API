@@ -1,6 +1,7 @@
 ﻿using JobMarketplace.Application.Common.Interfaces;
 using JobMarketplace.Domain.Entities;
 using JobMarketplace.Domain.Enums;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -20,6 +21,7 @@ namespace JobMarketplace.Infrastructure.Persistence
         {
             await SeedUsersAsync(context, passwordHasher);
             await SeedCompaniesAsync(context);
+            await SeedJobsAsync(context);
             // Add more: await SeedJobsAsync(context);
         }
 
@@ -86,6 +88,67 @@ namespace JobMarketplace.Infrastructure.Persistence
             }
         }
 
+        private static async Task SeedJobsAsync(ApplicationDbContext context)
+        {
+            var data = await ReadSeedDataAsync<SeedJob>("seed-jobs.json");
+            if (data is null || data.Count == 0) return;
+
+            // Cache resolved/created companies within this seed run to avoid
+            // redundant DB queries when multiple jobs share the same company
+            var companyCache = new Dictionary<string, Company>();
+
+            var seededCount = 0;
+            foreach (var job in data)
+            {
+                var exists = await context.Jobs.AnyAsync(j => j.Title == job.Title && j.Company.Name == job.Company.Name);
+                if (exists) continue;
+
+                // Try cache first, then DB, then create new — no SaveChangesAsync needed mid-loop
+                if (!companyCache.TryGetValue(job.Company.Name, out var company))
+                {
+                    company = await context.Companies.FirstOrDefaultAsync(c => c.Name == job.Company.Name)
+                              ?? new Company
+                              {
+                                  Name = job.Company.Name,
+                                  Description = job.Company.Description,
+                                  Website = job.Company.Website,
+                                  Industry = job.Company.Industry,
+                                  Location = job.Company.Location,
+                                  EmployeeCount = job.Company.EmployeeCount,
+                                  FoundedYear = job.Company.FoundedYear,
+                                  ContactEmail = job.Company.ContactEmail.ToLowerInvariant(),
+                                  ContactPhone = job.Company.ContactPhone
+                              };
+
+                    companyCache[job.Company.Name] = company;
+                }
+
+                await context.Jobs.AddAsync(new Job
+                {
+                    Title = job.Title,
+                    Description = job.Description,
+                    Requirements = job.Requirements,
+                    Location = job.Location,
+                    IsRemote = job.IsRemote,
+                    SalaryMin = job.SalaryMin,
+                    SalaryMax = job.SalaryMax,
+                    SalaryCurrency = job.SalaryCurrency,
+                    JobType = job.JobType,
+                    Status = job.Status,
+                    ExpiresAt = job.ExpiresAt,
+                    Tags = job.Tags,
+                    Company = company  // EF Core resolves CompanyId and saves both in one shot
+                });
+                seededCount++;
+            }
+
+            if (seededCount > 0)
+            {
+                await context.SaveChangesAsync(); // Inserts companies first, then jobs — all in one transaction
+                Console.WriteLine($"Seeded {seededCount} job(s).");
+            }
+        }
+
         /// <summary>
         /// Reads an embedded JSON file from the SeedData folder.
         /// Returns null if the file doesn't exist — seeding is optional per entity.
@@ -125,6 +188,30 @@ namespace JobMarketplace.Infrastructure.Persistence
             public int FoundedYear { get; init; }
             public string ContactEmail { get; init; } = default!;
             public string? ContactPhone { get; init; }
+        }
+
+        private record SeedJob
+        {
+            public string Title { get; init; } = default!;
+            public string Description { get; init; } = default!;
+            public string? Requirements { get; init; }
+            public string Location { get; init; } = default!;
+            public bool IsRemote { get; init; }
+            public decimal? SalaryMin { get; init; }
+            public decimal? SalaryMax { get; init; }
+            public string? SalaryCurrency { get; init; }
+            public JobType JobType { get; init; } = default!;
+            public JobStatus Status { get; init; } = JobStatus.Draft;
+            public DateTime? ExpiresAt { get; init; }
+            public string? Tags { get; init; }
+            // CompanyId is intentionally omitted — company is resolved or created by name at seed time
+            public SeedCompany Company { get; init; } = default!;
+        }
+
+        private record SeedSkill
+        {
+            public string Name { get; init; } = default!;
+            public string Description { get; init; } = default!;
         }
     }
 }
